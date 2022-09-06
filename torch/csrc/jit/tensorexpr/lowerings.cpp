@@ -1868,7 +1868,7 @@ int nnc_lowerings_lazy_registration() {
   RegisterNNCLoweringsFunction aten_embedding(
       {"aten::embedding(Tensor weight, Tensor indices, int padding_idx=-1, bool scale_grad_by_freq=False, bool sparse=False) -> Tensor"},
       computeEmbedding);
-  
+
   RegisterNNCLoweringsFunction aten_index_select(
       {"aten::index_select(Tensor self, int dim, Tensor index) -> Tensor"},
       computeIndexSelect);

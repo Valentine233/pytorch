@@ -117,3 +117,44 @@ TEST(Ops, Embedding) {
   }
   TORCH_CHECK_EQ(check, 1);
 }
+
+TEST(Ops, IndexSelect) {
+  const auto graph_string = R"IR(
+    graph(%x : Float(10, 4, strides=[4, 1], device=cpu),
+          %index : Long(2, strides=[1], device=cpu)):
+      %padding_idx : int = prim::Constant[value=-1]()
+      %1 : int = prim::Constant[value=1]()
+      %2 : int = prim::Constant[value=0]()
+      %z.1 : Float(2, 4, strides=[4, 1], requires_grad=0, device=cpu) = aten::index_select(%x, %2, %index)
+      %z.2 : Float(2, 4, strides=[4, 1], requires_grad=0, device=cpu) = aten::add(%z.1, %z.1, %1)
+      %z.3 : Float(2, 4, strides=[4, 1], requires_grad=0, device=cpu) = aten::mul(%z.2, %z.2)
+      return (%z.3))IR";
+
+  auto graph = std::make_shared<torch::jit::Graph>();
+  parseIR(graph_string, &*graph);
+
+  auto input_tensor =
+      at::rand({10, 4}, at::TensorOptions(c10::kCPU).dtype(at::kFloat));
+  auto index_tensor =
+      at::randint(10, {2}, at::TensorOptions(c10::kCPU).dtype(at::kLong));
+
+  auto y_1 = at::index_select(input_tensor, 0, index_tensor);
+  auto y_2 = at::add(y_1, y_1, 1);
+  auto y_expected = at::mul(y_2, y_2);
+
+  TensorExprKernel k(graph);
+  std::vector<at::Tensor> inputs = {input_tensor, index_tensor};
+
+  std::vector<c10::IValue> stack = at::fmap<c10::IValue>(inputs);
+  k.run(stack);
+  auto y = stack[0].toTensor();
+
+  bool check = at::allclose(y_expected, y);
+  if (!check) {
+    std::cout << "input_tensor:\n" << input_tensor << std::endl;
+    std::cout << "index_tensor:\n" << index_tensor << std::endl;
+    std::cout << "y_expected:\n" << y_expected << std::endl;
+    std::cout << "y:\n" << y << std::endl;
+  }
+  TORCH_CHECK_EQ(check, 1);
+}

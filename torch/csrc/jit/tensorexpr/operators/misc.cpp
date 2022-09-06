@@ -787,7 +787,8 @@ Tensor computeIndexSelect(
     at::Device device) {
   const BufHandle& idxingTarget = c10::get<BufHandle>(inputs[0]);
   const BufHandle& indices = c10::get<BufHandle>(inputs[2]);
-  size_t dimOfIndirectIdxing = static_cast<size_t>(c10::get<int64_t>(inputs[1]));
+  size_t dimOfIndirectIdxing =
+      static_cast<size_t>(c10::get<int64_t>(inputs[1]));
   Dtype outputDtype = outputType.has_value() ? Dtype(*outputType) : kFloat;
   BufHandle outputBuf("index_select", outputShape, outputStrides, outputDtype);
 
